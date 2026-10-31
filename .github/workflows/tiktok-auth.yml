@@ -1,0 +1,34 @@
+name: tiktok-login
+
+on:
+  workflow_dispatch:
+    inputs:
+      code:
+        description: "เว้นว่างเพื่อรับลิงก์ล็อกอิน / วางโค้ดจากหน้า callback"
+        required: false
+        default: ""
+
+jobs:
+  login:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - name: TikTok login
+        env:
+          TT_CLIENT_KEY: ${{ secrets.TT_CLIENT_KEY }}
+          TT_CLIENT_SECRET: ${{ secrets.TT_CLIENT_SECRET }}
+          SITE_URL: ${{ vars.SITE_URL }}
+          CODE: ${{ inputs.code }}
+        run: python tools/tiktok_auth_ci.py
+      - name: Save refresh token
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          if [ -f .tt_new_refresh ]; then
+            gh secret set TT_REFRESH_TOKEN --repo "$GITHUB_REPOSITORY" < .tt_new_refresh
+            rm .tt_new_refresh
+          fi
